@@ -1,0 +1,115 @@
+This file details the changelog of Unicorn Engine.
+
+-----------------------------------
+[Version 1.0.2]: October 21st, 2020
+
+- Fix Java binding compilation
+- Enable building for ARM little-endian only (ignore big-endian)
+
+------------------------------------
+[Version 1.0.2-rc6]: Sept 24th, 2020
+
+- Add uc_context_free() API
+- Fix context saving/retoring API (core & Python binding)
+
+------------------------------------
+[Version 1.0.2-rc5]: Sept 22nd, 2020
+
+- Add cmake option to build Unicorn as a static library
+- Fix error handling of mmap()
+- uc_emu_start() can be reentrant
+- Fix naming conflicts when built with systemd
+- Fix setjmp/longjmp on native Windows
+- Fix enabled hooks even after deleting them
+- X86:
+    - Fix 64bit fstenv
+    - Fix IP value of 16bit mode
+- ARM:
+    - Fix APSR handling
+- Python: Remove UC_ERR_TIMEOUT
+
+-----------------------------------
+[Version 1.0.2-rc4]: May 29th, 2020
+
+- No longer require Python to build
+- Fix recursive UC_HOOK_MEM callbacks for cross pages access
+- Remove UC_ERR_TIMEOUT, so timeout on uc_emu_start() is not considered error
+- Added UC_QUERY_TIMEOUT to query exit reason
+- Fix UAF when deleting hook while in hook callback
+- Ensure that hooks are unaffected by a request to stop emulation.
+- Fix block hooks being called twice after an early exit from execution.
+- Fix binding install on python2 (MacOS)
+- X86:
+    - Support read/write STn registers
+    - Support read/write X64 base regs
+- ARM64:
+    - Support some new registers
+
+----------------------------------
+[Version 1.0.1]: April 20th, 2017
+
+- Properly handle selected-architecture build.
+- Fix compilation issues on PPC & S390x.
+- Fix a memory leak on uc_mem_protect().
+- ARM:
+    - Support big-endian mode.
+    - Correct instruction size of Thumb/Thumb2 code.
+    - Support read/write APSR register.
+- ARM64:
+    - Support read/write NEON registers.
+    - Support read/write NZCV registers.
+- Mips: Support read/write Mips64 registers.
+- X86: Support read/write MSR.
+- Haskell binding: update to the latest API.
+- Python: allow not having PATH setup.
+
+----------------------------------
+[Version 1.0]: February 23rd, 2017
+
+- Fix build script for BSD host.
+- Fix building Unicorn on Arm/PPC/Sparc/S390 hosts.
+- X86:
+    - Fix 16bit address computation.
+    - Fix initial state of segment registers.
+
+----------------------------------
+[Version 1.0-rc3]: January 25th, 2017
+
+- Rename API uc_context_free() to uc_free().
+- ARM:
+    - uc_reg_write() now can modify CPSR register.
+	- Add some ARM coproc registers.
+- ARM64: uc_reg_read|write() now handles W0-W31 registers.
+- Windows: fix a double free bug in uc_close().
+- New VB6 binding.
+- Java: update to support new APIs from v1.0-rc1.
+- Python:
+    - Fix memory leaking that prevents UC instances from being GC.
+    - Remove some dependencies leftover from glib time.
+	- Add new method mem_regions() (linked to uc_mem_regions() API)
+
+----------------------------------
+[Version 1.0-rc2]: January 4th, 2017
+
+- Remove glib & pkconfig dependency.
+- Python: fix an issue to restore support for FreeBSD (and other *BSD Unix).
+- ARM: support MCLASS cpu (Cortex-M3).
+- Windows: export a static lib that can be used outside of Mingw
+
+----------------------------------
+[Version 1.0-rc1]: December 22nd, 2016
+
+- Lots of bugfixes in all architectures.
+- Better support for ARM Thumb.
+- Fix many memory leaking issues.
+- New bindings: Haskell, MSVC.
+- Better support for Python3.
+- New APIs: uc_query, uc_reg_write_batch, uc_reg_read_batch, uc_mem_map_ptr, uc_mem_regions, uc_context_alloc, uc_context_save & uc_context_restore.
+- New memory hook type: UC_HOOK_MEM_READ_AFTER.
+- Add new version macros UC_VERSION_{MAJOR, MINOR, EXTRA}
+
+----------------------------------
+[Version 0.9]: October 15th, 2015
+
+- Initial public release.
+
