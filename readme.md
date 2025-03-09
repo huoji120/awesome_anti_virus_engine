@@ -1,118 +1,140 @@
-# PE文件恶意软件检测系统
+## Preface
 
-这是一个基于机器学习的PE文件恶意软件检测系统，使用XGBoost算法对PE文件进行分类。
+**key08 Security** has surpassed **3,000 followers**, meaning that a significant portion of cybersecurity professionals in China are keeping an eye on it. So, it's time for a big project.
 
-## 功能特点
+### Why This Project?
+While working in the domestic cybersecurity field, I realized that **there is still a lot of untapped potential in the overall technical level**. Many people working in cybersecurity might also be interested in how **security software** on their computers actually works. Additionally, some might even dream of developing their **own antivirus software** or see it as their long-term goal.
 
-- 利用PE文件结构特征进行恶意软件检测
-- 基于XGBoost机器学习算法
-- 提供训练和预测功能
-- 输出详细的分类报告和可视化结果
+So, I felt there was a need to systematically **document the working principles of an antivirus engine**. While working on this, I noticed that the **information available online is close to zero**. The few available sources only describe outdated technologies like **signature-based scanning and cloud antivirus from before 2006**. Antivirus software seems to be treated like a **black box**.
 
-## 系统架构
+To **systematically educate**, rather than spread **misinformation or meme-based security practices** like some other public security accounts, I spent **two days** developing an antivirus engine that aligns with **modern security practices (as of 2025)**.
 
-该系统包含以下组件：
+Now, I will explain **how it works, what its weaknesses are**, and at the end of the chapter, I will even **open-source the code**, which can be **compiled directly using Visual Studio**, making **learning more convenient**.
 
-1. **特征提取模块**：C++编写的特征提取器，分析PE文件结构和行为特征
-2. **训练模块**：Python编写的模型训练代码，使用XGBoost算法
-3. **预测模块**：Python编写的模型推理代码，用于检测未知文件
+> ⚠️ **WARNING:** This code is provided **for learning purposes only**. The **datasets for machine learning, signature analysis, and dynamic behavior detection are extremely small**, so **detection effectiveness is very limited**.
+> 
+> **Do not use this code for your "bypass AV" tests** and then complain that it fails to detect certain samples. This is **not intended for antivirus evasion testing**.
+> **If you want to improve it, study the issues yourself instead of copying and pasting the code and then asking why it doesn't work!**
 
-## 特征集
+---
 
-系统从PE文件中提取以下特征：
+## Classification of Antivirus Engines
+Currently, all major security vendors promote their so-called **NGAV (Next-Gen Antivirus)**, but in reality, most detection engines fall into these four categories:
 
-1. PE段属性 (是否有配置、调试信息、例外处理、导出、导入等)
-2. 导入的DLL库
-3. 文件熵
-4. 入口点前64字节的归一化值
-5. 节区信息 (节区数量、平均熵、最大熵、归一化平均熵、大小比率)
-6. 代码段与整个文件的比率
-7. 节区数量
+1. **Cloud-Based Detection**
+   - This includes:
+     - **Fuzzy hashing engines** (such as `ssdeep`, `simhash`, etc.), which are used to **compare the similarity of files** (some vendors call this **"virus DNA"**).
+     - **Traditional hash-based engines**, which rely on **SHA1, SHA256**, etc.
+     - **Various cloud-based sandbox, manual or automated analysis systems**.
 
-## 环境要求
+2. **Signature-Based Detection**
+3. **AI & Machine Learning-Based Detection**
+4. **Heuristic-Based Sandbox Detection**
 
-- Python 3.7+
-- 依赖包：
-  - pandas
-  - numpy
-  - xgboost
-  - scikit-learn
-  - matplotlib
-  - seaborn
-  - joblib
+Cloud-based engines are **extremely complex** and are typically a **core capability of each security company**, so **we won't discuss their implementation here** (except for those who simply use **VirusTotal (VT) as their cloud engine**). 
 
-安装依赖：
+That leaves **categories 2, 3, and 4**, which are typically combined in AV solutions.
 
-```bash
-pip install pandas numpy xgboost scikit-learn matplotlib seaborn joblib
-```
+Each has its own strengths and weaknesses:
+- **Signature-Based Detection**: Does **not** have heuristic capabilities and **fully relies on manual rule creation**, but it is the **most effective**. Each security vendor's detection capabilities **heavily rely on their signature database**.
+- **Heuristic-Based Sandbox Detection**: Has **weak detection capabilities**, is **easily bypassed**, and **lags behind evolving threats**. It also tends to generate **false positives**.
+- **AI/Machine Learning-Based Detection**: Provides **high detection rates** but also produces **high false positive rates**, often **negatively impacting business operations** (e.g., compiling a simple **Hello World!** application in **Visual Studio** might trigger an alert). **Many AI-based engines are overly aggressive** and flag almost anything **without a digital signature**.
 
-## 使用说明
+---
 
-### 1. 准备数据
+## What Are We Going to Build?
+Today, we will create **a combined Machine Learning + Behavior-Based Sandbox Engine**.
 
-需要准备两个CSV文件：
-- `malware.csv`：恶意软件样本的特征数据
-- `whitelist.csv`：正常软件样本的特征数据
+We are **not** implementing a **signature-based engine** because that would be **too simple** (if you're interested in signature matching, check out **YARA**).
 
-这些CSV文件由C++特征提取模块生成。
+The overall engine structure is as follows:
+![](https://key08.com/usr/uploads/2025/03/926716651.png)
 
-### 2. 训练模型
+We need to implement **two core modules**:
+1. **Sandbox Behavior Analysis Module**
+2. **Machine Learning-Based Detection Module**
 
-运行以下命令进行模型训练：
+We will **introduce each module step by step**.
 
-```bash
-python train_model.py
-```
+---
 
-训练结果将保存为`xgboost_malware_detector.model`文件，并生成性能评估图表：
-- `confusion_matrix.png`：混淆矩阵
-- `feature_importance.png`：特征重要性排序
+## Sandbox Module
+A **sandbox module** is typically used for **unpacking and behavior analysis**. Essentially, it is a **PE file emulator**.
 
-### 3. 预测未知文件
+In our system, we use **Unicorn Engine** to **simulate CPU execution**. **Unicorn Engine** is a **lightweight**, **cross-platform** CPU emulation framework that **supports multiple architectures**, including **MIPS, ARM, PowerPC, x86, and x64**. It is based on **QEMU** and was first introduced at **Black Hat 2015** by the **GrayShift security team**.
 
-使用训练好的模型预测未知文件：
+### Main Steps of the Sandbox:
+1. **Initialize the Emulation Environment**
+   - Relocate PE file sections
+   - Setup stack memory
+   - Initialize `Unicorn Engine` and allocate virtual memory
+   - Map the PE file into the virtual environment
+   - Load required DLLs into the virtual machine
+   - Hook critical DLL functions to monitor behavior
+   - Set up essential handles, stack, **PEB**, **TEB**, etc.
+   - Store important PE metadata for unpacking
 
-```bash
-python predict.py <csv文件路径1> [csv文件路径2] ...
-```
+2. **Relocation Processing**
+   - If a **PE header contains a relocation table**, Windows will relocate **resources and functions** before execution.
 
-预测结果将保存为`*_predictions.csv`文件。
+3. **Memory and Stack Allocation**
+   - The **stack memory** must be fully emulated for the execution environment.
 
-## 示例
+4. **Mapping PE Sections into Memory**
+   - A **PE file's size on disk differs from its actual size when loaded in memory**.
+   - We must **expand** it and **map each section accordingly**.
 
-```bash
-# 训练模型
-python train_model.py
+5. **Load Required DLLs**
+   - **Parse the Import Table** and **map necessary DLLs** into our virtual machine.
 
-# 预测单个文件
-python predict.py unknown_samples.csv
+6. **Intercept API Calls**
+   - Hook **imported API functions**.
 
-# 批量预测多个文件
-python predict.py file1.csv file2.csv file3.csv
-```
+7. **Shellcode & Packed Malware Detection**
+   - Monitor for **self-modifying code execution**, which indicates **packed malware**.
 
-## 性能指标
+8. **Behavior-Based Detection**
+   - Detect suspicious behavior, such as:
+     - **Downloading executable files via `WinHttp`**
+     - **Excessive `sleep` delays**
+     - **Accessing sensitive directories**
+     - **Direct access to `LDR` structures** (used to detect stealth malware)
 
-在测试数据集上，该系统通常能达到以下性能：
+### Sandbox Performance:
+Here’s an example detection result:
+![](https://key08.com/usr/uploads/2025/03/408250478.png)
 
-- 准确率：95%+
-- 召回率：90%+
-- 精确率：92%+
-- F1值：91%+
+---
 
-_注意：实际性能可能因训练数据和参数设置而异。_
+## Machine Learning Module
+The **machine learning module** is used to classify files based on extracted PE features.
 
-## 扩展与优化
+### Feature Engineering:
+We extract the following feature sets:
+1. **PE Header Features** (Presence of Import Tables, TLS sections, relocations, etc.)
+2. **Imported DLLs** (Checks for specific suspicious DLLs)
+3. **File Entropy** (Measures randomness)
+4. **Entry Point Byte Sequence** (Examines the first 64 bytes of code)
+5. **Section Analysis** (Checks PE section sizes and entropy)
+6. **Code-to-Data Ratio** (Compares code section size vs. total PE file size)
 
-系统可以进行以下扩展和优化：
+### Training Data:
+We collected **1,000 benign samples** and **1,000 malicious samples**, saved their features into a **CSV file**, and used them for training.
 
-1. 添加更多特征，如字符串分析、API调用序列等
-2. 尝试其他机器学习算法或深度学习模型
-3. 集成多个模型进行综合决策
-4. 开发实时监控和检测功能
-5. 增加可解释性分析
+![](https://key08.com/usr/uploads/2025/03/1410311475.png)
 
-## License
+> ⚠️ **NOTE:** The dataset is **too small** for real-world performance. A proper dataset should have at least **100,000+ benign and 100,000+ malicious samples**.
 
-MIT
+### Model Training:
+We use **XGBoost** for training and then export the trained model to **pure C++ code** using **m2cgen**.
+
+![](https://key08.com/usr/uploads/2025/03/358391058.png)
+
+---
+
+## Conclusion
+This is a **basic but modern antivirus engine** using **sandbox-based behavior analysis** and **machine learning-based detection**.
+
+The **full source code** is available on **GitHub** (link below). 🚀
+
+🔗 **GitHub Repository:** [INSERT LINK HERE]
