@@ -71,6 +71,7 @@
         "stop_token": "cpp",
         "thread": "cpp",
         "xlocbuf": "cpp",
-        "xlocmes": "cpp"
+        "xlocmes": "cpp",
+        "unordered_set": "cpp"
     }
 }
